@@ -1,46 +1,161 @@
-# Sports Score Tracker & Management System
+# NIT Delhi Sports Management System 🏟️
 
-A data-driven management dashboard designed for university sports coaches and athletic departments to monitor player performance, manage team rosters, and track historical tournament statistics.
+> A production-grade, multi-sport tournament management platform for NIT Delhi, inspired by Cricheroes.
+
+**Supports:** Cricket 🏏 · Kabaddi 🤼 · Volleyball 🏐  
+**Tournaments:** ZEAL · NDPL · Inter-College Events
 
 ---
 
-## Core Features
+## 🏗️ Architecture
 
-* **Performance Analytics** Tracks specific player performance metrics over consecutive match cycles, helping coaches make data-backed selection decisions.
+5 autonomous agents communicate via a shared event bus:
 
-* **Roster & Squad Management** Streamlines student-athlete registration, team assignments, and tournament lineups in a single relational schema.
+| Agent | Responsibility |
+|---|---|
+| **Agent 1** — Database + Auth | PostgreSQL schema, ORM, JWT auth, RBAC |
+| **Agent 2** — Admin + Tournament | Tournament creation, match scheduling, admin control |
+| **Agent 3** — Scoring Engine | Live scoring for all 3 sports, ball-by-ball |
+| **Agent 4** — Player Experience | Student dashboard, captain tools, join codes, live center |
+| **Agent 5** — Analytics | Leaderboards, player stats, branch standings, MVP |
 
-* **Historical Data Querying** Built-in optimized queries to pull historical tournament data, medal tallies, and past player statistics.
+---
 
-## Tech Stack
+## 🚀 Quick Start
 
-* **Language:** Python
-* **Database:** PostgreSQL
-* **Core Logic:** Relational data schemas, complex indexing, and structured analytical queries
+### Option 1 — Docker (Recommended)
 
-## Database Architecture
+```bash
+cp .env.example .env          # Configure environment
+docker-compose up --build     # Start everything
+```
 
-The system's core relies on a highly structured relational database. Below is the mapping that drives the backend tracking logic:
+Open: http://localhost:8501  
+Default admin: `admin@nitdelhi.ac.in` / `admin123`
 
-| Table | Key Responsibility | Core Attributes |
-| :--- | :--- | :--- |
-| **Players** | Stores unique student-athlete records | `PlayerID`, `Name`, `Branch`, `Year`, `PrimarySport` |
-| **Teams** | Manages distinct sports rosters and squads | `TeamID`, `SportName`, `CurrentRosterSize` |
-| **MatchPerformance** | Tracks individual player statistics per game | `PerformanceID`, `PlayerID`, `MatchID`, `StatsJSON` |
-| **Tournaments** | Stores tournament metadata and results | `TournamentID`, `Name`, `Venue`, `Result` |
+### Option 2 — Local (requires PostgreSQL)
 
-## Query Optimization
+```bash
+# 1. Create virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 
-To help coaches quickly identify top-performing players under pressure, the backend executes an optimized aggregation query.
+# 2. Install dependencies
+pip install -r requirements.txt
 
-```sql
-SELECT 
-    p.Name, 
-    p.PrimarySport, 
-    COUNT(m.MatchID) AS TotalMatchesPlayed,
-    AVG(m.PerformanceRating) AS SeasonFormFactor
-FROM Players p
-JOIN MatchPerformance m ON p.PlayerID = m.PlayerID
-GROUP BY p.PlayerID, p.Name, p.PrimarySport
-HAVING AVG(m.PerformanceRating) >= 7.5
-ORDER BY SeasonFormFactor DESC;
+# 3. Configure environment
+cp .env.example .env
+# Edit .env → set your DATABASE_URL
+
+# 4. Run
+streamlit run app.py
+```
+
+---
+
+## 📁 Project Structure
+
+```
+sports_project/
+├── app.py                    ← Streamlit entry point
+├── requirements.txt
+├── docker-compose.yml
+├── Dockerfile
+│
+├── shared/
+│   ├── event_bus.py          ← Inter-agent pub/sub
+│   ├── constants/sports.py  ← Roster limits, sport rules
+│   └── logging/logger.py
+│
+├── agents/
+│   ├── database_agent/       ← Agent 1
+│   │   ├── models.py         ← All ORM models
+│   │   ├── auth.py           ← JWT + bcrypt
+│   │   ├── permissions.py    ← RBAC
+│   │   ├── db_service.py     ← Connection + seeding
+│   │   └── schema.sql        ← Raw SQL schema
+│   │
+│   ├── admin_agent/          ← Agent 2
+│   │   └── admin_dashboard.py
+│   │
+│   ├── scoring_agent/        ← Agent 3
+│   │   ├── cricket_engine.py
+│   │   ├── kabaddi_engine.py
+│   │   ├── volleyball_engine.py
+│   │   ├── match_state_manager.py
+│   │   └── scorer_ui.py
+│   │
+│   ├── player_experience_agent/  ← Agent 4
+│   │   ├── live_center.py
+│   │   ├── captain_dashboard.py
+│   │   ├── student_dashboard.py
+│   │   ├── roster_manager.py
+│   │   ├── profile_pages.py
+│   │   └── join_code_service.py
+│   │
+│   └── analytics_agent/      ← Agent 5
+│       ├── analytics_engine.py
+│       └── charts.py
+```
+
+---
+
+## 🎭 Roles
+
+| Role | Capabilities |
+|---|---|
+| **Admin** | Full access — create tournaments, manage all |
+| **Captain** | Create team, manage roster, generate join codes |
+| **Scorer** | Live score assigned matches |
+| **Student** | View schedules, join teams, see stats |
+
+---
+
+## 📡 Event System
+
+All agents communicate via `shared/event_bus.py` (pub/sub):
+
+```
+SCORE_UPDATED → Live Center auto-refreshes
+MATCH_FINISHED → Analytics recalculates leaderboard
+PLAYER_JOINED_TEAM → Roster updates
+TOURNAMENT_CREATED → Admin & Scoring agents notified
+```
+
+---
+
+## 🌐 Deployment
+
+### Streamlit Cloud
+1. Push to GitHub
+2. Connect at share.streamlit.io
+3. Set `DATABASE_URL` in Secrets
+4. Use Neon PostgreSQL (free tier) or Supabase
+
+### Neon PostgreSQL (Free)
+1. Create account at neon.tech
+2. Copy connection string
+3. Set as `DATABASE_URL` in `.env`
+
+---
+
+## ⚙️ Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | localhost |
+| `JWT_SECRET_KEY` | Token signing key | ⚠️ Change! |
+| `ADMIN_EMAIL` | Default admin account | admin@nitdelhi.ac.in |
+| `ADMIN_PASSWORD` | Default admin password | ⚠️ Change! |
+
+---
+
+## 🏆 Supported Tournaments
+
+- **ZEAL** — Annual inter-branch sports fest
+- **NDPL** — NIT Delhi Premier League (cricket)
+- **Inter-College** — Multi-college expansion ready
+
+---
+
+*Built for NIT Delhi · Scalable to all universities*
